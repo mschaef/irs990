@@ -54,10 +54,15 @@
 (defn bucket-file [ key ]
   (get-text (str base-url key)))
 
+(defn spit-gzip [ filename text ]
+  (with-open [fos (java.io.FileOutputStream. filename)
+              writer (java.io.OutputStreamWriter. (java.util.zip.GZIPOutputStream. fos) "UTF-8")]
+    (.write writer text)))
+
 (defn download-files [ listing ]
   (doseq [ contents-entry listing ]
     (let [ key (:key contents-entry ) ]
-      (spit (str "output/" key) (bucket-file key)))))
+      (spit-gzip (str "output/" key ".gz") (bucket-file key)))))
 
 (defn print-listing [ listing ]
   (doseq [ key listing ]
