@@ -1,14 +1,16 @@
 (ns irs990.core
-  (:require [clj-http.client :as client]
+  (:require [clj-http.client :as http]
             [clojure.data.xml :as xml])
   (:gen-class))
 
 (def debug true)
 
+(def cm (clj-http.conn-mgr/make-reusable-conn-manager {:timeout 10 :threads 1}))
+
 (defn get-text [ url ]
   (when debug
     (println [:get url]))
-  (:body (client/get url)))
+  (:body (http/get url {:connection-manager cm})))
 
 (defn get-xml [ url ]
   (xml/parse-str (get-text url)))
