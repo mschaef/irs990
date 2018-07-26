@@ -1,0 +1,10 @@
+# emacs
+*#
+*~
+
+# lein build
+target/
+
+# Misc
+.hgignore
+.lein-repl-history
