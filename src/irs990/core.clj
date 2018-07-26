@@ -59,10 +59,19 @@
               writer (java.io.OutputStreamWriter. (java.util.zip.GZIPOutputStream. fos) "UTF-8")]
     (.write writer text)))
 
+(defn write-output-file [ key text ]
+  (let [bin (.substring key 0 6)
+        output-pathname (str "output/" bin "/")
+        output-directory (java.io.File. output-pathname)]
+    (if (not (.isDirectory output-directory))
+      (.mkdirs output-directory))
+    (spit-gzip (str output-pathname key ".gz") text)))
+
 (defn download-files [ listing ]
-  (doseq [ contents-entry listing ]
-    (let [ key (:key contents-entry ) ]
-      (spit-gzip (str "output/" key ".gz") (bucket-file key)))))
+  (doseq [ contents-entry (take 500 listing) ]
+    (let [key (:key contents-entry )
+          text (bucket-file key)]
+      (write-output-file key text))))
 
 (defn print-listing [ listing ]
   (doseq [ key listing ]
