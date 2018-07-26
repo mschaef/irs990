@@ -46,7 +46,7 @@
          resources (:resources listing-segment)]
      (if (:truncated? listing-segment)
        (concat resources
-               (lazy-seq (bucket-listing (last (:key (:resources listing-segment))))))
+               (lazy-seq (bucket-listing (:key (last (:resources listing-segment))))))
        resources))))
 
 (defn bucket-file [ key ]
