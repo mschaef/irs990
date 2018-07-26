@@ -3,8 +3,11 @@
             [clojure.data.xml :as xml])
   (:gen-class))
 
+(def debug true)
+
 (defn get-text [ url ]
-  (println [:get url])
+  (when debug
+    (println [:get url]))
   (:body (client/get url)))
 
 (defn get-xml [ url ]
@@ -24,31 +27,47 @@
 
 (def base-url "https://s3.amazonaws.com/irs-form-990/")
 
+(defn parse-bucket-contents-entry [ element ]
+  {:key (xml-field-value-of element :Key)
+   :size (xml-field-value-of element :Size)})
+
 (defn req-bucket-listing [ marker-key ]
   (let [listing (get-xml (str base-url "?max-keys=800&marker=" marker-key))]
     {:count (Integer/valueOf (xml-field-value-of listing :MaxKeys))
      :truncated? (Boolean/valueOf (xml-field-value-of listing :IsTruncated))
-     :resource-names (map #(xml-field-value-of % :Key)  (xml-fields-of listing :Contents))}))
+     :resources (map parse-bucket-contents-entry
+                          (xml-fields-of listing :Contents))}))
 
 (defn bucket-listing
   ([]
    (bucket-listing ""))
   ([ marker-key ]
    (let [listing-segment (req-bucket-listing marker-key)
-         resource-names (:resource-names listing-segment)]
+         resources (:resources listing-segment)]
      (if (:truncated? listing-segment)
-       (concat resource-names
-               (lazy-seq (bucket-listing (last (:resource-names listing-segment)))))
-       resource-names))))
+       (concat resources
+               (lazy-seq (bucket-listing (last (:key (:resources listing-segment))))))
+       resources))))
 
 (defn bucket-file [ key ]
   (get-text (str base-url key)))
 
+(defn download-files [ listing ]
+  (doseq [ contents-entry listing ]
+    (let [ key (:key contents-entry ) ]
+      (spit (str "output/" key) (bucket-file key)))))
+
+(defn print-listing [ listing ]
+  (doseq [ key listing ]
+    (println key)))
+
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (let [listing (bucket-listing)]
-    (doseq [ key listing ]
-      (spit (str "output/" key) (bucket-file key)))
-    (println [:count (count listing)]))
+  (let [action (case (or (first args) "list")
+                 "list" print-listing
+                 "download" download-files
+                 (throw (RuntimeException. "Must be either 'list' or 'download'")))
+        listing (bucket-listing)]
+    (action listing))
   (println "end run."))
