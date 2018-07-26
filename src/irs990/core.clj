@@ -59,13 +59,18 @@
               writer (java.io.OutputStreamWriter. (java.util.zip.GZIPOutputStream. fos) "UTF-8")]
     (.write writer text)))
 
+(defn ensure-directory [ directory-path ]
+  (let [output-directory (java.io.File. directory-path)]
+    (if (not (.isDirectory output-directory))
+      (.mkdirs output-directory))))
+
+(def ensure-directory-once (memoize ensure-directory))
+
 (defn write-output-file [ key text ]
   (let [bin (.substring key 0 6)
-        output-pathname (str "output/" bin "/")
-        output-directory (java.io.File. output-pathname)]
-    (if (not (.isDirectory output-directory))
-      (.mkdirs output-directory))
-    (spit-gzip (str output-pathname key ".gz") text)))
+        output-path (str "output/" bin "/")]
+    (ensure-directory-once output-path)
+    (spit-gzip (str output-path key ".gz") text)))
 
 (defn download-files [ listing ]
   (doseq [ contents-entry (take 500 listing) ]
