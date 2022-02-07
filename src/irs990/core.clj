@@ -72,11 +72,13 @@
     (ensure-directory-once output-path)
     (spit-gzip (str output-path key ".gz") text)))
 
+(defn download-file [ contents-entry ]
+  (let [key (:key contents-entry )
+        text (bucket-file key)]
+    (write-output-file key text)))
+
 (defn download-files [ listing ]
-  (doseq [ contents-entry (take 500 listing) ]
-    (let [key (:key contents-entry )
-          text (bucket-file key)]
-      (write-output-file key text))))
+  (doall (pmap download-file (take 500 listing))))
 
 (defn print-listing [ listing ]
   (doseq [ key listing ]
@@ -85,10 +87,13 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (let [action (case (or (first args) "list")
-                 "list" print-listing
-                 "download" download-files
-                 (throw (RuntimeException. "Must be either 'list' or 'download'")))
-        listing (bucket-listing)]
-    (action listing))
-  (println "end run."))
+  (time
+   (do
+     (let [action (case (or (first args) "list")
+                    "list" print-listing
+                    "download" download-files
+                    (throw (RuntimeException. "Must be either 'list' or 'download'")))
+           listing (bucket-listing)]
+       (action listing))
+     (shutdown-agents)
+     (println "end run."))))
